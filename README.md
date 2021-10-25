@@ -14,7 +14,8 @@ Add shelf tab "dabin_tools" to your Shelf. In it you will find the tools below a
 Some are pretty usable, while others are minimal examples from the houdini document and random demos.
 - Copy node as Object Merge
 - Place Box (while initializing its dimensions to the selected node's bounding box)
-- Align Nodes
+  - Partially deprecated in favor of the Shape Spawner node.
+- Align Nodes (Tailored to the way I like to organize my nodes.)
   - When there is a single node selected, this will try and layout the selected node's parent nodes recursively.
   - If there are multiple selections, it will layout the selected nodes using the youngest node as the pivot.
   - Try experimenting what it does to some random tree of nodes. Or look into the script.
