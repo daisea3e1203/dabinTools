@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <toolshelf name="shelf_shortcuts" label="Shortcuts">
+    <memberTool name="copy_as_object_merge"/>
+    <memberTool name="statedemo"/>
+    <memberTool name="test_pyside"/>
+    <memberTool name="create_pbr_shader"/>
+    <memberTool name="dabin_place_box"/>
+    <memberTool name="dabin_horizontal_align"/>
+  </toolshelf>
+
+  <tool name="test_pyside" label="Test PySide2" icon="MISC_python">
+    <script scriptType="python"><![CDATA[from PySide2 import QtCore
+from PySide2 import QtWidgets
+
+class FontDemo(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        QtWidgets.QWidget.__init__(self, parent)
+        
+        hbox = QtWidgets.QHBoxLayout()
+        self.setGeometry(500, 300, 250, 110)
+        self.setWindowTitle("Font Demo")
+        
+        button = QtWidgets.QPushButton("Change Font", self)
+        button.setFocusPolicy(QtCore.Qt.NoFocus)
+        button.move(20, 20)
+        
+        hbox.addWidget(button)
+        
+        self.connect(button, QtCore.SIGNAL('clicked()'), self.showDialog)
+        
+        self.label = QtWidgets.QLabel('This is some sample text', self)
+        self.label.move(130, 20)
+        
+        hbox.addWidget(self.label, 1)
+        self.setLayout(hbox)
+        
+    def showDialog(self):
+        ok, font = QtWidgets.QFontDialog.getFont()
+        if ok:
+            self.label.setFont(font)
+
+dialog = FontDemo()
+dialog.show()]]></script>
+  </tool>
+
+  <tool name="copy_as_object_merge" label="Copy as OM" icon="PLASMA_App">
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import hou
+import os.path
+import random
+import re
+
+# Normal click: apply base color and copy as ObjectMerge
+# Ctrl click  : apply random color and copy as ObjectMerge
+# Shift click : just apply base color
+
+# Check if the shelf was ctrl-clicked
+ctrlclick = kwargs["ctrlclick"] if kwargs.has_key("ctrlclick") else False
+shiftclick = kwargs["shiftclick"] if kwargs.has_key("shiftclick") else False
+
+# Create colors
+basecolor = hou.Color([0.094, 0.369, 0.69])
+randcolor = []
+for i in range(3):
+    randcolor.append(random.random())
+randcolor = hou.Color(randcolor)
+
+# Main
+selectedNodes = hou.selectedNodes()
+
+if len(selectedNodes) == 0:
+    hou.ui.displayMessage("Please select a node")
+elif len(selectedNodes) > 1:
+    hou.ui.displayMessage("Please select only one node")
+else:
+    for node in selectedNodes:
+        # Change selected node's appearance
+        nodePath = node.path()
+        node.setUserData('nodeshape', 'chevron_down')
+        if ctrlclick:
+            node.setColor(randcolor)
+        else:
+            node.setColor(basecolor)
+        # Copy as ObjectMerge
+        if not shiftclick:
+            curPath = os.path.dirname(nodePath)
+            curname = os.path.basename(nodePath)
+            curname = re.sub(r'^OUT_', '', curname)
+            objectMerge = hou.node(curPath).createNode('object_merge', 'in_' + curname)
+            objectMerge.parm('objpath1').set(nodePath)
+            objectMerge.setSelected(True, clear_all_selected=True)
+            objectMerge.setUserData('nodeshape', 'chevron_down')
+            if ctrlclick:
+                objectMerge.setColor(randcolor)
+            
+            # Copy object merge node to clipboard
+            sel = hou.selectedNodes()
+            hou.copyNodesToClipboard(sel)
+            objectMerge.destroy()
+        
+        node.setSelected(True, clear_all_selected=True)
+]]></script>
+  </tool>
+
+  <tool name="create_pbr_shader" label="Create PBR Shader" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import hou
+import os
+import fnmatch
+import re
+
+
+master_filename = hou.ui.selectFile(
+    title="Select a File"
+)
+dirname = os.path.dirname(master_filename)
+basename = os.path.basename(master_filename)
+prefix = basename.split('.')[-1]
+basename = '_'.join(basename.split('_')[:-1])
+
+
+# Select similar files
+# ----------------------------------------
+matches = []
+p = re.compile('.*%s_.+\.%s' % (basename, prefix))
+for root, dirnames, filenames in os.walk(dirname):
+    for filename in filenames:
+        if p.match(filename):
+            matches.append(os.path.join(root, filename))
+
+            
+#node = hou.node("/mat").createNode("principledshader::2.0", node_name="mypbr")
+vop = hou.node("/mat").createNode("redshift_vopnet", node_name="mypbr")
+mat = hou.node("/mat/%s/Material1" % (vop.name()))
+
+# Set fresnel type to metalness
+mat.parm("refl_fresnel_mode").set("2")
+
+# Create texture nodes
+# ----------------------------------------
+textures = [
+    {"name": "diffuse",   "texture": "color",     "input": "diffuse_color" },
+    {"name": "roughness", "texture": "roughness", "input": "refl_roughness"},
+    {"name": "metalness", "texture": "metalness", "input": "refl_metalness"}
+]
+# Create and plug texture node if there's a matching texture
+for d in textures:
+    texture_re = re.compile(r'.*_%s.%s' % (d["texture"], prefix), re.IGNORECASE)
+    for filename in matches:
+        if texture_re.match(filename):
+            texture_node = mat.createInputNode(mat.inputIndex(d["input"]), "redshift::TextureSampler", node_name=d["name"])
+            texture_node.parm("tex0").set(filename)
+            break
+        
+# Create bumpmap if there is one
+bumpmap_re = re.compile(r'.*_normal.%s' % (prefix,), re.IGNORECASE)
+for filename in matches:
+    if bumpmap_re.match(filename):
+        bumpmap = mat.createInputNode(mat.inputIndex("bump_input"), "redshift::BumpMap", node_name="BumpMap")
+        bumpmap.parm("inputType").set("1")
+        bumpmap_tex = bumpmap.createInputNode(bumpmap.inputIndex("input"), "redshift::TextureSampler", node_name="bumpmap_texture")
+        bumpmap_tex.parm("tex0").set(filename)
+        break
+        
+# Layout
+vop.layoutChildren()]]></script>
+  </tool>
+
+  <tool name="dabin_place_box" label="Place Box" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import hou
+import os
+
+
+selectedNodes = hou.selectedNodes()
+
+if len(selectedNodes) == 0:
+    hou.ui.displayMessage("Please select a node")
+else:
+    # Get node info
+    # -------------------------------------------------
+    node = selectedNodes[0]
+    nodePath = node.path()
+    dirPath = os.path.dirname(nodePath)
+    nodePos = node.position()
+    bbox = node.geometry().boundingBox()
+    bsize = bbox.sizevec()
+    bpos = bbox.center()
+    
+    # Create box
+    # -------------------------------------------------
+    box = hou.node(dirPath).createNode('box', 'the_box')
+    # Place box to the right in the network viewer
+    box.setPosition(hou.Vector2([nodePos[0]+2, nodePos[1]]))
+    # Set parms
+    box.parm('sizex').set(bsize[0])
+    box.parm('sizey').set(bsize[1])
+    box.parm('sizez').set(bsize[2])
+    box.parm('tx').set(bpos[0])
+    box.parm('ty').set(bpos[1])
+    box.parm('tz').set(bpos[2])
+    # Focus on node
+    box.setSelected(True, clear_all_selected=True)]]></script>
+  </tool>
+
+  <tool name="dabin_horizontal_align" label="Align Nodes" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import hou
+
+selectedNodes = hou.selectedNodes()
+
+def sortHorizontal(col, row, maxRow, pos, node, sortedNodes, targetNodes):
+    # Skip if the node's been sorted before
+    notInTarget = (len(targetNodes) > 0) and (node.name() not in targetNodes)
+    if (node.name() in sortedNodes) or notInTarget:
+        return (col, row-1)
+    # Set node position
+    node.setPosition(hou.Vector2([pos[0] + 1.5*col, pos[1] + row]))
+    sortedNodes.append(node.name())
+        
+    inputs = node.inputs()
+    # return the next position if there are no inputs
+    if len(inputs) <= 0:
+        return (col + 1, row)
+    # Else, position inputs    
+    row = row + 1
+    for n in inputs:
+         # Check if the node has been sorted before
+         (col, newMaxRow) = sortHorizontal(
+             col, row, maxRow, pos, n, sortedNodes, targetNodes
+         )
+         maxRow = max(maxRow, newMaxRow)
+    
+    return (col, maxRow)
+    
+
+def sortMain(row, pos, node, sortedNodes, targetNodes):
+    # Skip if the node is not selected
+    if (len(targetNodes) > 0) and (node.name() not in targetNodes):
+        return
+    node.setPosition(hou.Vector2([pos[0], pos[1] + row]))
+    inputs = node.inputs()
+    # If first and second input is connected to the same node
+    if (len(inputs) > 1) and (inputs[0].name() == inputs[1].name()):
+        sortMain(row + 1, pos, inputs[0], sortedNodes, targetNodes)
+        return 
+        
+    # Other cases
+    row += 1
+    # Add extra space if the node has many inputs
+    if len(inputs) > 2: row += 1
+    col = 1
+    if len(inputs) > 1:
+        maxRow = row
+        for n in inputs[1:]:
+            (col, newMaxRow) = sortHorizontal(
+                col, row, row, pos, n, sortedNodes, targetNodes
+            )
+            maxRow = max(maxRow, newMaxRow)
+        row = maxRow + 1
+    if len(inputs) > 0 and inputs[0] is not None:
+        sortMain(row, pos, inputs[0], sortedNodes, targetNodes)
+
+        
+def getMainLineNodes(node, sortedNodes):
+    sortedNodes.append(node.name())
+    inputs = node.inputs()
+    if len(inputs) > 0 and inputs[0] is not None:
+        getMainLineNodes(inputs[0], sortedNodes)
+        
+        
+def getYoungestNode(nodes):
+    maxParents = -1
+    selected = None
+    for n in nodes:
+        parents = []
+        getMainLineNodes(n, parents)
+        nParents = len(parents)
+        if nParents > maxParents: 
+            maxParents = nParents
+            selected = n
+    return selected
+
+        
+if len(selectedNodes) == 0:
+    hou.ui.displayMessage("Please select a node")
+else:
+    # Get node with the most parent (placed at the bottom of the tree)
+    node = getYoungestNode(selectedNodes)
+    # Get node info
+    targetNodes = map(lambda x: x.name(), selectedNodes)
+    if len(targetNodes) == 1:
+        targetNodes = []
+    pos = node.position()
+    # Get all main line nodes
+    sortedNodes = []
+    getMainLineNodes(node, sortedNodes)
+    sortMain(0, pos, node, sortedNodes, targetNodes)]]></script>
+  </tool>
+
+  <tool name="statedemo" label="State Demo" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import hou
+import stateutils
+
+# Check if the viewer is at SOP level
+viewer = stateutils.findSceneViewer()
+network = viewer.pwd()
+if network.childTypeCategory() != hou.sopNodeTypeCategory():
+    # Ask the user to go into SOP level
+    hou.ui.displayMessage("Please dive into a SOP node.")
+else:
+    # Set viewer state
+    viewer.setCurrentState("statedemo")
+    ]]></script>
+  </tool>
+</shelfDocument>

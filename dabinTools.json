@@ -1,0 +1,8 @@
+{
+    "env": [
+        {
+            "DABIN_TOOLS": "C:\\Users\\owner\\Src\\houdini_dabin_tools"
+        }
+    ],
+    "path": "$DABIN_TOOLS"
+}
