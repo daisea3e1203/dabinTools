@@ -30,3 +30,4 @@ Some are pretty usable, while others are minimal examples from the houdini docum
 - Mirror and Weld: Mirror and weld input using the origin or 2nd input's center as the pivot
 - Extend Shape: Cut input along plane and extend.
 - Shape Spawner: Spawn different kinds of shape initialized to the size of the second input's bounding box. Intelligently adds and lays out spawned shapes to the first input's merge node.
+- Array: Array mesh. Copy and transform where you can set the endpoint instead of the spacing. Can also use second input's bounding box to calculate spacing.
