@@ -19,6 +19,11 @@ Some are pretty usable, while others are minimal examples from the houdini docum
   - When there is a single node selected, this will try and layout the selected node's parent nodes recursively.
   - If there are multiple selections, it will layout the selected nodes using the youngest node as the pivot.
   - Try experimenting what it does to some random tree of nodes. Or look into the script.
+- Create PBR Shader
+  - Select one texture file, and create a Redshift shader with all related textures pluged in the right place.
+  - Demands a certain kind of filename, look into script for details.
+  - Usable, but might behave unexpectedly in some cases. Its not going to delete your file or do anything destructive so
+    it should be fine to play around with.
 - etc...
 
 ### Nodes
