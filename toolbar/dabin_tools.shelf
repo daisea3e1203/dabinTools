@@ -5,15 +5,6 @@
  Note, that two definitions of the same element are not allowed in
  a single file. -->
 
-  <toolshelf name="shelf_shortcuts" label="Shortcuts">
-    <memberTool name="copy_as_object_merge"/>
-    <memberTool name="statedemo"/>
-    <memberTool name="test_pyside"/>
-    <memberTool name="create_pbr_shader"/>
-    <memberTool name="dabin_place_box"/>
-    <memberTool name="dabin_horizontal_align"/>
-  </toolshelf>
-
   <tool name="test_pyside" label="Test PySide2" icon="MISC_python">
     <script scriptType="python"><![CDATA[from PySide2 import QtCore
 from PySide2 import QtWidgets
@@ -293,7 +284,7 @@ else:
     # Get node with the most parent (placed at the bottom of the tree)
     node = getYoungestNode(selectedNodes)
     # Get node info
-    targetNodes = map(lambda x: x.name(), selectedNodes)
+    targetNodes = list(map(lambda x: x.name(), selectedNodes))
     if len(targetNodes) == 1:
         targetNodes = []
     pos = node.position()
@@ -317,5 +308,91 @@ else:
     # Set viewer state
     viewer.setCurrentState("statedemo")
     ]]></script>
+  </tool>
+
+  <toolshelf name="dabin_tools" label="Dabin Tools">
+    <memberTool name="copy_as_object_merge"/>
+    <memberTool name="statedemo"/>
+    <memberTool name="test_pyside"/>
+    <memberTool name="create_pbr_shader"/>
+    <memberTool name="dabin_place_box"/>
+    <memberTool name="dabin_horizontal_align"/>
+    <memberTool name="promote_rig_pose_parms"/>
+  </toolshelf>
+
+  <tool name="promote_rig_pose_parms" label="Promote Rig Pose Parms" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import hou
+import re
+
+
+def prefixName(name, prefix):
+    return prefix + "_" + name
+
+def safeCapitalize(s):
+    if len(s) <= 1:
+        return s.capitalize()
+    else:
+        first = s[0].capitalize()
+        return first + s[1:]
+    
+def snakeCaseToSpaced(s):
+    words = s.split("_")
+    words = list(map(safeCapitalize, words))
+    return ' '.join(words)
+    
+selectedNodes = hou.selectedNodes()
+
+if len(selectedNodes) == 0:
+    hou.ui.displayMessage("Please select a node")
+else:
+    node = selectedNodes[0]
+    hdadef = node.parent().type().definition()
+    parmTempGroup = hdadef.parmTemplateGroup()
+    
+    iGroups = node.parm("transformations").eval()
+    parmNames = ['t', 'r', 's']
+    
+    for i in range(iGroups): # over groups
+        si = str(i)
+        group = node.parm("group" + si)
+        groupName = re.sub('_group', '', group.alias())
+        groupName = snakeCaseToSpaced(groupName)
+        
+        for parmName in parmNames: # over parameters rows
+            parmTuple = node.parmTuple(parmName + si)
+            isLocked = (
+                parmTuple[0].isLocked()
+                and parmTuple[1].isLocked()
+                and parmTuple[2].isLocked()
+            )
+            if isLocked: continue
+            
+            parmTemp = parmTuple.parmTemplate()
+            # Rename and relabel parmTemplate
+            parmTemp.setName(prefixName(parmTemp.name(), node.name()))
+            parmTemp.setLabel(groupName + " " + parmTemp.label())
+            # Update parameter template group
+            parmTempGroup.append(parmTemp)
+        
+#        break # XXXXXX
+            
+    # Update definition
+    hdadef.setParmTemplateGroup(parmTempGroup, rename_conflicting_parms=True)
+    
+    for i in range(iGroups):# over groups
+        si = str(i)
+        
+        for parmName in parmNames: # over parameter rows
+            parmTuple = node.parmTuple(parmName + si)
+            isLocked = parmTuple[0].isLocked()
+            if isLocked: continue
+            
+            # Set links
+            for parm in parmTuple: # over parameter cells
+                name = prefixName(parm.name(), node.name())
+                parm.setExpression(f'ch("../{name}")')
+                
+#        break # XXXXXX
+]]></script>
   </tool>
 </shelfDocument>
