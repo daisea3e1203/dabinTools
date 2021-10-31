@@ -259,78 +259,19 @@ if selectedNodes:
   </tool>
 
   <tool name="dabin_promote_rig_pose_parms" label="Promote Rig Pose Parms" icon="PLASMA_App">
-    <script scriptType="python"><![CDATA[import hou
-import re
+    <script scriptType="python"><![CDATA[import dabinUtils as utils
+import dabinPromoteParms as dpp
 
+# DEBUG
+from importlib import reload
+reload(dpp)
+reload(utils)
 
-def prefixName(name, prefix):
-    return prefix + "_" + name
+selectedNodes = utils.getSelectedNodes()
 
-def safeCapitalize(s):
-    if len(s) <= 1:
-        return s.capitalize()
-    else:
-        first = s[0].capitalize()
-        return first + s[1:]
-    
-def snakeCaseToSpaced(s):
-    words = s.split("_")
-    words = list(map(safeCapitalize, words))
-    return ' '.join(words)
-    
-selectedNodes = hou.selectedNodes()
-
-if len(selectedNodes) == 0:
-    hou.ui.displayMessage("Please select a node")
-else:
-    node = selectedNodes[0]
-    hdadef = node.parent().type().definition()
-    parmTempGroup = hdadef.parmTemplateGroup()
-    
-    iGroups = node.parm("transformations").eval()
-    parmNames = ['t', 'r', 's']
-    
-    for i in range(iGroups): # over groups
-        si = str(i)
-        group = node.parm("group" + si)
-        groupName = re.sub('_group', '', group.alias())
-        groupName = snakeCaseToSpaced(groupName)
-        
-        for parmName in parmNames: # over parameters rows
-            parmTuple = node.parmTuple(parmName + si)
-            isLocked = (
-                parmTuple[0].isLocked()
-                and parmTuple[1].isLocked()
-                and parmTuple[2].isLocked()
-            )
-            if isLocked: continue
-            
-            parmTemp = parmTuple.parmTemplate()
-            # Rename and relabel parmTemplate
-            parmTemp.setName(prefixName(parmTemp.name(), node.name()))
-            parmTemp.setLabel(groupName + " " + parmTemp.label())
-            # Update parameter template group
-            parmTempGroup.append(parmTemp)
-        
-#        break # XXXXXX
-            
-    # Update definition
-    hdadef.setParmTemplateGroup(parmTempGroup, rename_conflicting_parms=True)
-    
-    for i in range(iGroups):# over groups
-        si = str(i)
-        
-        for parmName in parmNames: # over parameter rows
-            parmTuple = node.parmTuple(parmName + si)
-            isLocked = parmTuple[0].isLocked()
-            if isLocked: continue
-            
-            # Set links
-            for parm in parmTuple: # over parameter cells
-                name = prefixName(parm.name(), node.name())
-                parm.setExpression(f'ch("../{name}")')
-                
-#        break # XXXXXX
+if selectedNodes:
+    inst = dpp.PromoteParms(selectedNodes)
+    inst.promoteRigParms()
 ]]></script>
   </tool>
 

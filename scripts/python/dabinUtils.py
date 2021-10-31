@@ -15,3 +15,20 @@ def getSelectedNodes():
         return None
 
     return selectedNodes
+
+
+# String Manipulation
+# -----------------------------------------------------------------------------
+def safeCapitalize(s):
+    if len(s) <= 1:
+        return s.capitalize()
+    else:
+        first = s[0].capitalize()
+        return first + s[1:]
+
+
+def snakeCaseToSpaced(s: str):
+    words = s.split("_")
+    words = list(map(safeCapitalize, words))
+    return " ".join(words)
+
