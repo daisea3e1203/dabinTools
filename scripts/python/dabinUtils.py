@@ -31,4 +31,3 @@ def snakeCaseToSpaced(s: str):
     words = s.split("_")
     words = list(map(safeCapitalize, words))
     return " ".join(words)
-
