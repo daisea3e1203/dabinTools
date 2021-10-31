@@ -168,12 +168,16 @@ vop.layoutChildren()]]></script>
     <script scriptType="python"><![CDATA[import hou
 import os
 
+import dabinUtils as utils
 
-selectedNodes = hou.selectedNodes()
+#DEBUG
+#from importlib import reload
+#reload(utils)
 
-if len(selectedNodes) == 0:
-    hou.ui.displayMessage("Please select a node")
-else:
+
+selectedNodes = utils.getSelectedNodes()
+
+if selectedNodes:
     # Get node info
     # -------------------------------------------------
     node = selectedNodes[0]
@@ -200,100 +204,6 @@ else:
     box.setSelected(True, clear_all_selected=True)]]></script>
   </tool>
 
-  <tool name="dabin_horizontal_align" label="Align Nodes" icon="PLASMA_App">
-    <script scriptType="python"><![CDATA[import hou
-
-selectedNodes = hou.selectedNodes()
-
-def sortHorizontal(col, row, maxRow, pos, node, sortedNodes, targetNodes):
-    # Skip if the node's been sorted before
-    notInTarget = (len(targetNodes) > 0) and (node.name() not in targetNodes)
-    if (node.name() in sortedNodes) or notInTarget:
-        return (col, row-1)
-    # Set node position
-    node.setPosition(hou.Vector2([pos[0] + 1.5*col, pos[1] + row]))
-    sortedNodes.append(node.name())
-        
-    inputs = node.inputs()
-    # return the next position if there are no inputs
-    if len(inputs) <= 0:
-        return (col + 1, row)
-    # Else, position inputs    
-    row = row + 1
-    for n in inputs:
-         # Check if the node has been sorted before
-         (col, newMaxRow) = sortHorizontal(
-             col, row, maxRow, pos, n, sortedNodes, targetNodes
-         )
-         maxRow = max(maxRow, newMaxRow)
-    
-    return (col, maxRow)
-    
-
-def sortMain(row, pos, node, sortedNodes, targetNodes):
-    # Skip if the node is not selected
-    if (len(targetNodes) > 0) and (node.name() not in targetNodes):
-        return
-    node.setPosition(hou.Vector2([pos[0], pos[1] + row]))
-    inputs = node.inputs()
-    # If first and second input is connected to the same node
-    if (len(inputs) > 1) and (inputs[0].name() == inputs[1].name()):
-        sortMain(row + 1, pos, inputs[0], sortedNodes, targetNodes)
-        return 
-        
-    # Other cases
-    row += 1
-    # Add extra space if the node has many inputs
-    if len(inputs) > 2: row += 1
-    col = 1
-    if len(inputs) > 1:
-        maxRow = row
-        for n in inputs[1:]:
-            (col, newMaxRow) = sortHorizontal(
-                col, row, row, pos, n, sortedNodes, targetNodes
-            )
-            maxRow = max(maxRow, newMaxRow)
-        row = maxRow + 1
-    if len(inputs) > 0 and inputs[0] is not None:
-        sortMain(row, pos, inputs[0], sortedNodes, targetNodes)
-
-        
-def getMainLineNodes(node, sortedNodes):
-    sortedNodes.append(node.name())
-    inputs = node.inputs()
-    if len(inputs) > 0 and inputs[0] is not None:
-        getMainLineNodes(inputs[0], sortedNodes)
-        
-        
-def getYoungestNode(nodes):
-    maxParents = -1
-    selected = None
-    for n in nodes:
-        parents = []
-        getMainLineNodes(n, parents)
-        nParents = len(parents)
-        if nParents > maxParents: 
-            maxParents = nParents
-            selected = n
-    return selected
-
-        
-if len(selectedNodes) == 0:
-    hou.ui.displayMessage("Please select a node")
-else:
-    # Get node with the most parent (placed at the bottom of the tree)
-    node = getYoungestNode(selectedNodes)
-    # Get node info
-    targetNodes = list(map(lambda x: x.name(), selectedNodes))
-    if len(targetNodes) == 1:
-        targetNodes = []
-    pos = node.position()
-    # Get all main line nodes
-    sortedNodes = []
-    getMainLineNodes(node, sortedNodes)
-    sortMain(0, pos, node, sortedNodes, targetNodes)]]></script>
-  </tool>
-
   <tool name="statedemo" label="State Demo" icon="PLASMA_App">
     <script scriptType="python"><![CDATA[import hou
 import stateutils
@@ -316,11 +226,39 @@ else:
     <memberTool name="test_pyside"/>
     <memberTool name="create_pbr_shader"/>
     <memberTool name="dabin_place_box"/>
+    <memberTool name="dabin_promote_rig_pose_parms"/>
+    <memberTool name="dabin_auto_align"/>
+    <memberTool name="dabin_vertical_align"/>
     <memberTool name="dabin_horizontal_align"/>
-    <memberTool name="promote_rig_pose_parms"/>
+    <memberTool name="dabin_shift_down_nodes"/>
+    <memberTool name="dabin_shift_up_nodes"/>
+    <memberTool name="dabin_shift_right_nodes"/>
+    <memberTool name="dabin_shift_left_nodes"/>
   </toolshelf>
 
-  <tool name="promote_rig_pose_parms" label="Promote Rig Pose Parms" icon="PLASMA_App">
+  <tool name="dabin_vertical_align" label="Vertical Align" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import dabinUtils as utils
+import dabinNodeWrangle as  dnw
+
+# DEBUG
+# ----------
+#from importlib import reload
+#reload(utils)
+#reload(dnw)
+# ----------
+
+(shiftclick, ctrlclick) = utils.getClickStates(kwargs)
+selectedNodes = utils.getSelectedNodes()
+
+if selectedNodes:
+    inst = dnw.DabinNodeWrangle(selectedNodes)
+    if ctrlclick:
+        inst.verticalAlign(1) # Align to youngest node
+    else:
+        inst.verticalAlign(0) # Align to oldest node]]></script>
+  </tool>
+
+  <tool name="dabin_promote_rig_pose_parms" label="Promote Rig Pose Parms" icon="PLASMA_App">
     <script scriptType="python"><![CDATA[import hou
 import re
 
@@ -394,5 +332,178 @@ else:
                 
 #        break # XXXXXX
 ]]></script>
+  </tool>
+
+  <tool name="dabin_auto_align" label="Auto Align" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import hou
+
+selectedNodes = hou.selectedNodes()
+
+
+def sortHorizontal(col, row, maxRow, pos, node, sortedNodes, targetNodes):
+    # Skip if the node's been sorted before
+    notInTarget = (len(targetNodes) > 0) and (node.name() not in targetNodes)
+    if (node.name() in sortedNodes) or notInTarget:
+        return (col, row - 1)
+    # Set node position
+    node.setPosition(hou.Vector2([pos[0] + 1.5 * col, pos[1] + row]))
+    sortedNodes.append(node.name())
+
+    inputs = node.inputs()
+    # return the next position if there are no inputs
+    if len(inputs) <= 0:
+        return (col + 1, row)
+    # Else, position inputs
+    row = row + 1
+    for n in inputs:
+        # Check if the node has been sorted before
+        (col, newMaxRow) = sortHorizontal(
+            col, row, maxRow, pos, n, sortedNodes, targetNodes
+        )
+        maxRow = max(maxRow, newMaxRow)
+
+    return (col, maxRow)
+
+
+def sortMain(row, pos, node, sortedNodes, targetNodes):
+    # Skip if the node is not selected
+    if (len(targetNodes) > 0) and (node.name() not in targetNodes):
+        return
+    node.setPosition(hou.Vector2([pos[0], pos[1] + row]))
+    inputs = node.inputs()
+    # If first and second input is connected to the same node
+    if (len(inputs) > 1) and (inputs[0].name() == inputs[1].name()):
+        sortMain(row + 1, pos, inputs[0], sortedNodes, targetNodes)
+        return
+
+    # Other cases
+    row += 1
+    # Add extra space if the node has many inputs
+    if len(inputs) > 2:
+        row += 1
+    col = 1
+    if len(inputs) > 1:
+        maxRow = row
+        for n in inputs[1:]:
+            (col, newMaxRow) = sortHorizontal(
+                col, row, row, pos, n, sortedNodes, targetNodes
+            )
+            maxRow = max(maxRow, newMaxRow)
+        row = maxRow + 1
+    if len(inputs) > 0 and inputs[0] is not None:
+        sortMain(row, pos, inputs[0], sortedNodes, targetNodes)
+
+
+def getMainLineNodes(node, sortedNodes):
+    sortedNodes.append(node.name())
+    inputs = node.inputs()
+    if len(inputs) > 0 and inputs[0] is not None:
+        getMainLineNodes(inputs[0], sortedNodes)
+
+
+def getYoungestNode(nodes):
+    maxParents = -1
+    selected = None
+    for n in nodes:
+        parents = []
+        getMainLineNodes(n, parents)
+        nParents = len(parents)
+        if nParents > maxParents:
+            maxParents = nParents
+            selected = n
+    return selected
+
+
+if len(selectedNodes) == 0:
+    hou.ui.displayMessage("Please select a node")
+else:
+    # Get node with the most parent (placed at the bottom of the tree)
+    node = getYoungestNode(selectedNodes)
+    # Get node info
+    targetNodes = list(map(lambda x: x.name(), selectedNodes))
+    if len(targetNodes) == 1:
+        targetNodes = []
+    pos = node.position()
+    # Get all main line nodes
+    sortedNodes = []
+    getMainLineNodes(node, sortedNodes)
+    sortMain(0, pos, node, sortedNodes, targetNodes)
+]]></script>
+  </tool>
+
+  <tool name="dabin_shift_down_nodes" label="Shift Down" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import dabinUtils as utils
+import dabinNodeWrangle as dnw
+
+# DEBUG
+# ----------
+from importlib import reload
+reload(utils)
+reload(dnw)
+# ----------
+
+selectedNodes = utils.getSelectedNodes()
+
+if selectedNodes:
+    inst = dnw.DabinNodeWrangle(selectedNodes)
+    inst.shiftNodes(-1, 0)]]></script>
+  </tool>
+
+  <tool name="dabin_shift_up_nodes" label="Shift Up" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import dabinUtils as utils
+import dabinNodeWrangle as dnw
+
+# DEBUG
+# ----------
+from importlib import reload
+reload(utils)
+reload(dnw)
+# ----------
+
+selectedNodes = utils.getSelectedNodes()
+
+if selectedNodes:
+    inst = dnw.DabinNodeWrangle(selectedNodes)
+    inst.shiftNodes(1, 0)]]></script>
+  </tool>
+
+  <tool name="dabin_shift_right_nodes" label="Shift to Right" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import dabinUtils as utils
+import dabinNodeWrangle as dnw
+
+# DEBUG
+# ----------
+#from importlib import reload
+#reload(utils)
+#reload(dnw)
+# ----------
+
+selectedNodes = utils.getSelectedNodes()
+
+if selectedNodes:
+    inst = dnw.DabinNodeWrangle(selectedNodes)
+    inst.shiftNodes(0, 1)]]></script>
+  </tool>
+
+  <tool name="dabin_horizontal_align" label="Horizontal Align" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import dabinUtils as utils
+import dabinNodeWrangle as  dnw
+
+# DEBUG
+# ----------
+#from importlib import reload
+#reload(utils)
+#reload(dnw)
+# ----------
+
+(shiftclick, ctrlclick) = utils.getClickStates(kwargs)
+selectedNodes = utils.getSelectedNodes()
+
+if selectedNodes:
+    inst = dnw.DabinNodeWrangle(selectedNodes)
+    if ctrlclick:
+        inst.horizontalAlign(1) # Align to youngest node
+    else:
+        inst.horizontalAlign(0) # Align to oldest node]]></script>
   </tool>
 </shelfDocument>
