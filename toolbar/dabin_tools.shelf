@@ -6,37 +6,65 @@
  a single file. -->
 
   <tool name="test_pyside" label="Test PySide2" icon="MISC_python">
-    <script scriptType="python"><![CDATA[from PySide2 import QtCore
+    <script scriptType="python"><![CDATA[from functools import partial
+
+from PySide2 import QtCore
 from PySide2 import QtWidgets
 
-class FontDemo(QtWidgets.QWidget):
+
+class PysideDemo(QtWidgets.QWidget):
     def __init__(self, parent=None):
         QtWidgets.QWidget.__init__(self, parent)
         
-        hbox = QtWidgets.QHBoxLayout()
-        self.setGeometry(500, 300, 250, 110)
-        self.setWindowTitle("Font Demo")
+        # Window
+        layout = QtWidgets.QVBoxLayout()
+        # self.setGeometry(500, 300, 250, 110)
+        self.setWindowTitle("Demo")
         
-        button = QtWidgets.QPushButton("Change Font", self)
+        # Text editor
+        self.text_editor = QtWidgets.QLineEdit()
+        layout.addWidget(self.text_editor)
+        
+        # Button
+        button = QtWidgets.QPushButton("Change Text", self)
         button.setFocusPolicy(QtCore.Qt.NoFocus)
-        button.move(20, 20)
+        button.clicked.connect(self.onClick)
+        layout.addWidget(button)
         
-        hbox.addWidget(button)
-        
-        self.connect(button, QtCore.SIGNAL('clicked()'), self.showDialog)
-        
+        # Label
         self.label = QtWidgets.QLabel('This is some sample text', self)
-        self.label.move(130, 20)
+        layout.addWidget(self.label, 1)
         
-        hbox.addWidget(self.label, 1)
-        self.setLayout(hbox)
+        # Check Box
+        group_box = QtWidgets.QGroupBox("Check Box group")
+        group_box_layout = QtWidgets.QVBoxLayout()
+        check_box = QtWidgets.QCheckBox("Check01")
+        check_box.stateChanged.connect(self.onToggle)
+        group_box_layout.addWidget(check_box, 1)
+        group_box.setLayout(group_box_layout)
+        layout.addWidget(group_box)
         
-    def showDialog(self):
+        # Finalize layout
+        self.setLayout(layout)
+        
+    def showFontDialog(self):
         ok, font = QtWidgets.QFontDialog.getFont()
         if ok:
             self.label.setFont(font)
+            
+    def onClick(self):
+        self.label.setText(self.text_editor.text())
+        
+    def onToggle(self, index):
+        text = self.label.text()
+        if index == 2:
+            self.label.setText(text + "!")
+        elif index == 1:
+            self.label.setText(text + "!!!")
+        else:
+            self.label.setText("")
 
-dialog = FontDemo()
+dialog = PysideDemo()
 dialog.show()]]></script>
   </tool>
 
