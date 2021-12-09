@@ -82,8 +82,8 @@ import re
 # Shift click : just apply base color
 
 # Check if the shelf was ctrl-clicked
-ctrlclick = kwargs["ctrlclick"] if kwargs.has_key("ctrlclick") else False
-shiftclick = kwargs["shiftclick"] if kwargs.has_key("shiftclick") else False
+ctrlclick = kwargs["ctrlclick"] if "ctrlclick" in kwargs else False
+shiftclick = kwargs["shiftclick"] if "shiftclick" in kwargs else False
 
 # Create colors
 basecolor = hou.Color([0.094, 0.369, 0.69])
