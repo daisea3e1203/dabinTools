@@ -229,15 +229,16 @@ renamer.show()
   <tool name="dabin_increment_version" label="Increment Version" icon="PLASMA_App">
     <script scriptType="python"><![CDATA[import hou
 import re
+import dabinUtils as utils
 
-nodes = hou.selectedNodes()
-node = nodes[0]
+nodes = utils.getSelectedNodes()
 
-name = node.name()
-
-pattern = r"(\d+)$"
-result = re.sub(pattern, lambda exp: f"{int(exp.group(1))+1:03}", name)
-
-node.setName(result)]]></script>
+for node in nodes:
+    name = node.name()
+    
+    pattern = r"(\d+)$"
+    result = re.sub(pattern, lambda exp: f"{int(exp.group(1))+1:03}", name)
+    
+    node.setName(result)]]></script>
   </tool>
 </shelfDocument>
