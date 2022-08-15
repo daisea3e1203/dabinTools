@@ -231,6 +231,9 @@ renamer.show()
 import re
 import dabinUtils as utils
 
+def increment(version):
+    return f"{int(version)+1:03}"
+
 nodes = utils.getSelectedNodes()
 
 with hou.undos.group("Increment node versions"):
@@ -243,10 +246,14 @@ with hou.undos.group("Increment node versions"):
     for i, node in enumerate(nodes):
         original_name = original_names[i]
         
-        pattern = r"(\d+)$"
-        result = re.sub(pattern, lambda exp: f"{int(exp.group(1))+1:03}", original_name)
+        pattern = re.compile(r"(\d+)$")
+        match = pattern.search(original_name)
         
-        node.setName(result)
+        if match is None:
+            node.setName(original_name + "_v001")
+        else:
+            result = pattern.sub(lambda exp: increment(exp.group(1)), original_name)
+            node.setName(result)
 ]]></script>
   </tool>
 </shelfDocument>
