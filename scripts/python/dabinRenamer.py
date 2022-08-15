@@ -72,9 +72,15 @@ class Renamer(QtWidgets.QWidget):
         selected_nodes = hou.selectedNodes()
 
         with hou.undos.group("Rename nodes"):
+            original_names = []
+
             for node in selected_nodes:
                 original_name = node.name()
+                original_names.append(original_name)
+                node.setName(original_name + "_bak")
+
+            for i, node in enumerate(selected_nodes):
+                original_name = original_names[i]
                 replaced_name = original_name.replace(search_str, replace_str)
                 node.setName(replaced_name)
-        
 
