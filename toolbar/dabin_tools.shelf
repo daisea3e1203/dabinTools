@@ -192,6 +192,7 @@ else:
     <memberTool name="create_pbr_shader"/>
     <memberTool name="dabin_place_box"/>
     <memberTool name="dabin_promote_rig_pose_parms"/>
+    <memberTool name="dabin_increment_version"/>
   </toolshelf>
 
   <tool name="dabin_promote_rig_pose_parms" label="Promote Rig Pose Parms" icon="PLASMA_App">
@@ -223,5 +224,20 @@ reload(dabinRenamer)
 renamer = dabinRenamer.Renamer()
 renamer.show()
 ]]></script>
+  </tool>
+
+  <tool name="dabin_increment_version" label="Increment Version" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import hou
+import re
+
+nodes = hou.selectedNodes()
+node = nodes[0]
+
+name = node.name()
+
+pattern = r"(\d+)$"
+result = re.sub(pattern, lambda exp: f"{int(exp.group(1))+1:03}", name)
+
+node.setName(result)]]></script>
   </tool>
 </shelfDocument>
