@@ -5,69 +5,6 @@
  Note, that two definitions of the same element are not allowed in
  a single file. -->
 
-  <tool name="test_pyside" label="Test PySide2" icon="MISC_python">
-    <script scriptType="python"><![CDATA[from functools import partial
-
-from PySide2 import QtCore
-from PySide2 import QtWidgets
-
-
-class PysideDemo(QtWidgets.QWidget):
-    def __init__(self, parent=None):
-        QtWidgets.QWidget.__init__(self, parent)
-        
-        # Window
-        layout = QtWidgets.QVBoxLayout()
-        # self.setGeometry(500, 300, 250, 110)
-        self.setWindowTitle("Demo")
-        
-        # Text editor
-        self.text_editor = QtWidgets.QLineEdit()
-        layout.addWidget(self.text_editor)
-        
-        # Button
-        button = QtWidgets.QPushButton("Change Text", self)
-        button.setFocusPolicy(QtCore.Qt.NoFocus)
-        button.clicked.connect(self.onClick)
-        layout.addWidget(button)
-        
-        # Label
-        self.label = QtWidgets.QLabel('This is some sample text', self)
-        layout.addWidget(self.label, 1)
-        
-        # Check Box
-        group_box = QtWidgets.QGroupBox("Check Box group")
-        group_box_layout = QtWidgets.QVBoxLayout()
-        check_box = QtWidgets.QCheckBox("Check01")
-        check_box.stateChanged.connect(self.onToggle)
-        group_box_layout.addWidget(check_box, 1)
-        group_box.setLayout(group_box_layout)
-        layout.addWidget(group_box)
-        
-        # Finalize layout
-        self.setLayout(layout)
-        
-    def showFontDialog(self):
-        ok, font = QtWidgets.QFontDialog.getFont()
-        if ok:
-            self.label.setFont(font)
-            
-    def onClick(self):
-        self.label.setText(self.text_editor.text())
-        
-    def onToggle(self, index):
-        text = self.label.text()
-        if index == 2:
-            self.label.setText(text + "!")
-        elif index == 1:
-            self.label.setText(text + "!!!")
-        else:
-            self.label.setText("")
-
-dialog = PysideDemo()
-dialog.show()]]></script>
-  </tool>
-
   <tool name="copy_as_object_merge" label="Copy as OM" icon="PLASMA_App">
     <toolMenuContext name="network">
       <contextNetType>SOP</contextNetType>
@@ -251,7 +188,7 @@ else:
   <toolshelf name="dabin_tools" label="dnTools">
     <memberTool name="copy_as_object_merge"/>
     <memberTool name="statedemo"/>
-    <memberTool name="test_pyside"/>
+    <memberTool name="dabin_renamer"/>
     <memberTool name="create_pbr_shader"/>
     <memberTool name="dabin_place_box"/>
     <memberTool name="dabin_promote_rig_pose_parms"/>
@@ -271,6 +208,20 @@ selectedNodes = utils.getSelectedNodes()
 if selectedNodes:
     inst = dpp.PromoteParms(selectedNodes)
     inst.promoteRigParms()
+]]></script>
+  </tool>
+
+  <tool name="dabin_renamer" label="Rename nodes" icon="MISC_python">
+    <script scriptType="python"><![CDATA[import dabinRenamer
+
+# DEBUG
+# ----------
+from importlib import reload
+reload(dabinRenamer)
+# ----------
+
+renamer = dabinRenamer.Renamer()
+renamer.show()
 ]]></script>
   </tool>
 </shelfDocument>
