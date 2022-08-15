@@ -11,8 +11,7 @@ def getSelectedNodes():
     selectedNodes = hou.selectedNodes()
 
     if len(selectedNodes) == 0:
-        hou.ui.displayMessage("Please select a node.")
-        return None
+        raise hou.Error("Please select a node.")
 
     return selectedNodes
 
