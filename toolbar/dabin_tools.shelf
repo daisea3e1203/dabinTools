@@ -49,8 +49,9 @@ else:
         if not shiftclick:
             curPath = os.path.dirname(nodePath)
             curname = os.path.basename(nodePath)
-            curname = re.sub(r'^OUT_', '', curname)
-            objectMerge = hou.node(curPath).createNode('object_merge', 'in_' + curname)
+            # curname = re.sub(r'^OUT_', '', curname)
+            parent_name = node.parent().name()
+            objectMerge = hou.node(curPath).createNode('object_merge', f'in_{parent_name}_{curname}')
             objectMerge.parm('objpath1').set(nodePath)
             objectMerge.setSelected(True, clear_all_selected=True)
             objectMerge.setUserData('nodeshape', 'chevron_down')
@@ -193,6 +194,8 @@ else:
     <memberTool name="dabin_place_box"/>
     <memberTool name="dabin_promote_rig_pose_parms"/>
     <memberTool name="dabin_increment_version"/>
+    <memberTool name="dabin_create_rndr_node"/>
+    <memberTool name="dabin_check_node"/>
   </toolshelf>
 
   <tool name="dabin_promote_rig_pose_parms" label="Promote Rig Pose Parms" icon="PLASMA_App">
@@ -255,5 +258,49 @@ with hou.undos.group("Increment node versions"):
             result = pattern.sub(lambda exp: increment(exp.group(1)), original_name)
             node.setName(result)
 ]]></script>
+  </tool>
+
+  <tool name="dabin_create_rndr_node" label="Create rndr node" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import hou
+import dabinUtils as utils
+
+basecolor = hou.Color([0.094, 0.369, 0.69])
+baseshape = 'chevron_down'
+
+nodes = utils.getSelectedNodes()
+if len(nodes) > 1:
+    raise hou.Error("Please selecte a single node.")
+# Get selected node's info
+node = nodes[0]
+node_name = node.name()
+parent_name = node.parent().name()
+parent_pos = node.parent().position()
+
+# Shape selected node
+node.setColor(basecolor)
+node.setUserData('nodeshape', baseshape)
+
+# Create a rndr node
+rndr_node = hou.node("/obj").createNode("geo")
+rndr_node.setName(f"rndr_{parent_name}")
+rndr_node.setColor(hou.Color([115/256, 94/256, 203/256]))
+rndr_node.setPosition((parent_pos[0]+3.0, parent_pos[1]))
+
+# Create an object merge inside the rndr node
+om_node = rndr_node.createNode("object_merge")
+om_node.setName(f"in_{parent_name}_{node_name}")
+om_node.parm('objpath1').set(node.path())
+om_node.setUserData('nodeshape', baseshape)
+]]></script>
+  </tool>
+
+  <tool name="dabin_check_node" label="Check Node" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import hou
+import dabinUtils as utils
+
+nodes = utils.getSelectedNodes()
+node = nodes[0]
+
+print(node.type())]]></script>
   </tool>
 </shelfDocument>
