@@ -255,7 +255,6 @@ else:
     <memberTool name="create_pbr_shader"/>
     <memberTool name="dabin_place_box"/>
     <memberTool name="dabin_promote_rig_pose_parms"/>
-    <memberTool name="test_pipeline"/>
   </toolshelf>
 
   <tool name="dabin_promote_rig_pose_parms" label="Promote Rig Pose Parms" icon="PLASMA_App">
