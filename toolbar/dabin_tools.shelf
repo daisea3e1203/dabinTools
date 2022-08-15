@@ -233,12 +233,13 @@ import dabinUtils as utils
 
 nodes = utils.getSelectedNodes()
 
-for node in nodes:
-    name = node.name()
-    
-    pattern = r"(\d+)$"
-    result = re.sub(pattern, lambda exp: f"{int(exp.group(1))+1:03}", name)
-    
-    node.setName(result)]]></script>
+with hou.undos.group("Increment node versions"):
+    for node in nodes:
+        name = node.name()
+        
+        pattern = r"(\d+)$"
+        result = re.sub(pattern, lambda exp: f"{int(exp.group(1))+1:03}", name)
+        
+        node.setName(result)]]></script>
   </tool>
 </shelfDocument>
