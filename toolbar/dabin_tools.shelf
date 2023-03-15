@@ -5,7 +5,7 @@
  Note, that two definitions of the same element are not allowed in
  a single file. -->
 
-  <tool name="copy_as_object_merge" label="Copy as OM" icon="PLASMA_App">
+  <tool name="copy_as_object_merge" label="Copy as OM" icon="$DABIN_TOOLS/icons/copy-solid.svg">
     <toolMenuContext name="network">
       <contextNetType>SOP</contextNetType>
     </toolMenuContext>
@@ -188,15 +188,18 @@ else:
 
   <toolshelf name="dabin_tools" label="dnTools">
     <memberTool name="copy_as_object_merge"/>
-    <memberTool name="statedemo"/>
     <memberTool name="dabin_renamer"/>
+    <memberTool name="dabin_create_rndr_node"/>
+    <memberTool name="promote_parm_to_controller"/>
+    <memberTool name="dabin_toggle_displayflag"/>
+    <memberTool name="dabin_increment_version"/>
+    <memberTool name="statedemo"/>
     <memberTool name="create_pbr_shader"/>
     <memberTool name="dabin_place_box"/>
     <memberTool name="dabin_promote_rig_pose_parms"/>
-    <memberTool name="dabin_increment_version"/>
-    <memberTool name="dabin_create_rndr_node"/>
     <memberTool name="dabin_check_node"/>
-    <memberTool name="dabin_toggle_displayflag"/>
+    <memberTool name="merge_objets_under_subnet"/>
+    <memberTool name="merge_megascans_assets"/>
   </toolshelf>
 
   <tool name="dabin_promote_rig_pose_parms" label="Promote Rig Pose Parms" icon="PLASMA_App">
@@ -216,7 +219,7 @@ if selectedNodes:
 ]]></script>
   </tool>
 
-  <tool name="dabin_renamer" label="Rename nodes" icon="MISC_python">
+  <tool name="dabin_renamer" label="Rename nodes" icon="$DABIN_TOOLS/icons/pen-to-square-regular.svg">
     <script scriptType="python"><![CDATA[import dabinRenamer
 
 # DEBUG
@@ -261,41 +264,41 @@ with hou.undos.group("Increment node versions"):
 ]]></script>
   </tool>
 
-  <tool name="dabin_create_rndr_node" label="Create rndr node" icon="PLASMA_App">
+  <tool name="dabin_create_rndr_node" label="Create rndr nodes" icon="$DABIN_TOOLS/icons/camera-retro-solid.svg">
     <script scriptType="python"><![CDATA[import hou
+import re
+
 import dabinUtils as utils
 
-basecolor = hou.Color([0.094, 0.369, 0.69])
+basecolor = hou.Color([132/255, 112/255, 218/255])
 baseshape = 'chevron_down'
 
 nodes = utils.getSelectedNodes()
-if len(nodes) > 1:
-    raise hou.Error("Please selecte a single node.")
-# Get selected node's info
-node = nodes[0]
-node_name = node.name()
-parent_name = node.parent().name()
-parent_pos = node.parent().position()
-
-# Shape selected node
-node.setColor(basecolor)
-node.setUserData('nodeshape', baseshape)
-
-# Create a rndr node
-rndr_node = hou.node("/obj").createNode("geo")
-rndr_node.setName(f"rndr_{parent_name}")
-rndr_node.setColor(hou.Color([115/256, 94/256, 203/256]))
-rndr_node.setPosition((parent_pos[0]+3.0, parent_pos[1]))
-
-# Create an object merge inside the rndr node
-om_node = rndr_node.createNode("object_merge")
-om_node.setName(f"in_{parent_name}_{node_name}")
-om_node.parm('objpath1').set(node.path())
-om_node.setUserData('nodeshape', baseshape)
+for i, node in enumerate(nodes):
+    # Get selected node's info
+    node_name = re.sub('^OUT_', '', node.name())
+    parent_name = node.parent().name()
+    parent_pos = node.parent().position()
+    
+    # Shape selected node
+    node.setColor(basecolor)
+    node.setUserData('nodeshape', baseshape)
+    
+    # Create a rndr node
+    rndr_node = hou.node("/obj").createNode("geo")
+    rndr_node.setName(f"rndr_{parent_name}_{node_name}")
+    rndr_node.setColor(hou.Color([115/256, 94/256, 203/256]))
+    rndr_node.setPosition((parent_pos[0]+2.5, parent_pos[1] - 1.0 * i))
+    
+    # Create an object merge inside the rndr node
+    om_node = rndr_node.createNode("object_merge")
+    om_node.setName(f"in_{parent_name}_{node_name}")
+    om_node.parm('objpath1').set(node.path())
+    om_node.setUserData('nodeshape', baseshape)
 ]]></script>
   </tool>
 
-  <tool name="dabin_check_node" label="Check Node" icon="PLASMA_App">
+  <tool name="dabin_check_node" label="Check Node" icon="$DABIN_TOOLS/icons/bug-solid.svg">
     <script scriptType="python"><![CDATA[import hou
 import dabinUtils as utils
 
@@ -305,7 +308,7 @@ node = nodes[0]
 print(node.type())]]></script>
   </tool>
 
-  <tool name="dabin_toggle_displayflag" label="Toggle Display Flag" icon="PLASMA_App">
+  <tool name="dabin_toggle_displayflag" label="Toggle Display Flag" icon="$DABIN_TOOLS/icons/eye-solid.svg">
     <script scriptType="python"><![CDATA[import hou
 import dabinUtils as utils
 
@@ -324,6 +327,92 @@ for node in nodes:
         
 # # Set display flag
 for node in nodes:
-    node.setDisplayFlag(not isAnyFlagSet)]]></script>
+    try:
+        node.setDisplayFlag(not isAnyFlagSet)
+    except AttributeError:
+        pass]]></script>
+  </tool>
+
+  <tool name="promote_parm_to_controller" label="Promote Parm to Controller" icon="$DABIN_TOOLS/icons/wrench-solid.svg">
+    <script scriptType="python"><![CDATA[import hou
+import re
+from pathlib import PurePosixPath as Path
+from dabinUtils import snakeCaseToSpaced
+
+parms = hou.parmClipboardContents()
+parm_obj = parms[0]
+
+# check if a controller exists in the same layer
+parm_path = Path(parm_obj["path"])
+parent = parm_path.parents[1]
+node = hou.node(str(parm_path.parents[0]))
+parent_node = hou.node(str(parent))
+ctrl_node = hou.node(str(parent / "CONTROL"))
+
+
+if ctrl_node is None:
+    ctrl_node = parent.createNode('null', node_name='CONTROL')
+
+# check if a parameter with the same name exists (include node name in parm name)
+node_name = node.name()
+node_name = re.sub("^set_", "", node_name) # remove set_ from name
+node_name = re.sub("\d+$", "", node_name) # remove trailing digits
+ctrl_parm_name = f"{node_name}_{parm_path.name}"
+
+parm_group = node.parmTemplateGroup()
+parm_temp = parm_group.find(parm_path.name)
+ctrl_parm_group = ctrl_node.parmTemplateGroup()
+ctrl_parm_temp = ctrl_parm_group.find(ctrl_parm_name)
+
+
+# if ctrl parm doesn't exist, create new parm in controller 
+if ctrl_parm_temp is None:
+    # reuse target node's parm
+    parm_temp.setName(ctrl_parm_name)
+    
+    # ask user for parameter name
+    (_, input_label) = hou.ui.readInput("New paramter label:")
+    if input_label is "":
+        input_label = snakeCaseToSpaced(ctrl_parm_name)
+    parm_temp.setLabel(input_label)
+
+    ctrl_parm_group.append(parm_temp)
+    ctrl_node.setParmTemplateGroup(ctrl_parm_group)
+    
+# set ctrl value to target node value if we're creating a new ctrl parameter
+ctrl_parm = ctrl_node.parm(ctrl_parm_name)
+if ctrl_parm_temp is None:
+    ctrl_parm.set(parm_obj["value"])
+
+# pass relative reference to parm
+parm = node.parm(parm_path.name)
+
+parm.set(ctrl_parm)
+
+
+]]></script>
+  </tool>
+
+  <tool name="merge_megascans_assets" label="Merge Megascans Assets" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import hou
+from pathlib import PurePosixPath as Path
+
+
+geos = hou.selectedNodes()
+
+container_geo = hou.node("/obj").createNode("geo")
+container_geo.setName("instancer")
+container_geo.moveToGoodPosition()
+
+
+# merge_geo = geo.createNode("merge_object")
+merge_packed = container_geo.createNode("mergepacked")
+
+for geo in geos:
+    name = geo.name()
+    out_geo_path = Path("/obj") / Path(name) / Path("Asset_Geometry") / Path(f"{name}_lod0")
+    om = container_geo.createNode("object_merge")
+    om.parm('objpath1').set(str(out_geo_path))
+    merge_packed.setNextInput(om)]]></script>
   </tool>
 </shelfDocument>

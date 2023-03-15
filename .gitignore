@@ -1,3 +1,4 @@
 __pycache__
 backup/
 *.code-workspace
+examples/test*

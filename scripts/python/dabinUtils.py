@@ -15,6 +15,15 @@ def getSelectedNodes():
 
     return selectedNodes
 
+def getSingleSelectedNode():
+    selectedNodes = hou.selectedNodes()
+
+    if len(selectedNodes) == 0:
+        raise hou.Error("Please select a node.")
+    elif len(selectedNodes) > 1:
+        raise hou.Error("Please select no more than 1 node.")
+
+    return selectedNodes[0]
 
 # String Manipulation
 # -----------------------------------------------------------------------------
