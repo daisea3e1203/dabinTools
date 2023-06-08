@@ -200,6 +200,8 @@ else:
     <memberTool name="dabin_check_node"/>
     <memberTool name="merge_objets_under_subnet"/>
     <memberTool name="merge_megascans_assets"/>
+    <memberTool name="check_for_external_files"/>
+    <memberTool name="tool_1"/>
   </toolshelf>
 
   <tool name="dabin_promote_rig_pose_parms" label="Promote Rig Pose Parms" icon="PLASMA_App">
@@ -321,7 +323,7 @@ if len(nodes) == 0:
 # Check if any node has the display flag on
 isAnyFlagSet = False
 for node in nodes:
-    if node.isDisplayFlagSet():
+    if "isDisplayFlagSet" in dir(node) and node.isDisplayFlagSet():
         isAnyFlagSet = True
         break
         
@@ -414,5 +416,71 @@ for geo in geos:
     om = container_geo.createNode("object_merge")
     om.parm('objpath1').set(str(out_geo_path))
     merge_packed.setNextInput(om)]]></script>
+  </tool>
+
+  <tool name="check_for_external_files" label="Check For External Files" icon="PLASMA_App">
+    <script scriptType="python"><![CDATA[import hou
+from pathlib import Path
+import os
+import shutil
+
+hipdir = os.environ["HIP"]
+hipdir = str(Path(hipdir).resolve())
+hipdir_posix = Path(hipdir).as_posix()
+
+def is_in_hip(path):
+    abs_path = str(Path(path).resolve())
+    return abs_path.startswith(hipdir) or abs_path.startswith("$HIP")
+
+references = hou.fileReferences()
+
+copied_files = {}
+
+for ref in references:
+    if (not is_in_hip(ref[1])) and (ref[0] is not None):
+        # 1. print refs
+        # -------------------------------------
+        print(ref)
+
+        # 2. copy assets, and assign new asset path to file parm
+        # -------------------------------------
+        # # check if path is already cached
+        # if (ref[1] in copied_files):
+        #     # used cached path
+        #     newFilePath = copied_files[ref[1]]
+        #     print(f"Path cached: {Path(ref[1]).name}")
+        # else:
+        #     # calculate new file path
+        #     param_path = Path(ref[0].path()[1:])
+        #     filename = Path(ref[1]).name
+        #     newFilePath = Path(hipdir) / Path("packed_assets") / param_path / filename
+            
+        #     # print(newFilePath)
+        #     # print(ref[0], ref[1])
+            
+        #     # check if src exists, skip if not
+        #     if not Path(ref[1]).exists():
+        #         print(f"Doesn't exist: {ref[1]}")
+        #         continue
+            
+        #     # copy file
+        #     newFilePath.parent.mkdir(parents=True, exist_ok=True)
+        #     shutil.copyfile(ref[1], newFilePath)
+            
+        #     # update cache
+        #     copied_files[ref[1]] = newFilePath
+            
+        # # Substitute hip dir with $HIP
+        # newFilePathStr = newFilePath.resolve().as_posix()
+        # newFilePathStr = newFilePathStr.replace(hipdir_posix, "$HIP")
+        
+        # print(newFilePathStr)
+        
+        # # Set param to new file
+        # parm = hou.parm(ref[0].path())
+        # parm.set(newFilePathStr)
+        
+        
+for i in range(24): print()]]></script>
   </tool>
 </shelfDocument>
