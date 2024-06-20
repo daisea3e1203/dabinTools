@@ -4,7 +4,7 @@ Houdini package with all my hand-crafted tools and nodes
 
 ## Installation
 
-- Copy dabinTools.json to the package folder (ex: C:/Users/username/Documents/houdini18.5/package in Windows)
+- Copy dabinTools.json to the package folder (ex: C:/Users/username/Documents/houdini18.5/packages in Windows)
 - Open dabinTools.json in your favorite code editor or notepad and edit the path to wherever you cloned this repository
 
 ## What's in here ?
