@@ -16,11 +16,13 @@ import re
 
 # Normal click: apply base color and copy as ObjectMerge
 # Ctrl click  : apply random color and copy as ObjectMerge
-# Shift click : just apply base color
+# Shift click : Just apply base color
+# Alt click : Pick color and copy as ObjectMerge
 
 # Check if the shelf was ctrl-clicked
 ctrlclick = kwargs["ctrlclick"] if "ctrlclick" in kwargs else False
 shiftclick = kwargs["shiftclick"] if "shiftclick" in kwargs else False
+altclick = kwargs["altclick"] if "altclick" in kwargs else False
 
 # Create colors
 basecolor = hou.Color([0.094, 0.369, 0.69])
@@ -28,6 +30,7 @@ randcolor = []
 for i in range(3):
     randcolor.append(random.random())
 randcolor = hou.Color(randcolor)
+nodecolor = None
 
 # Main
 selectedNodes = hou.selectedNodes()
@@ -43,6 +46,8 @@ else:
         node.setUserData('nodeshape', 'chevron_down')
         if ctrlclick:
             node.setColor(randcolor)
+        elif altclick:
+            nodecolor = node.color()
         else:
             node.setColor(basecolor)
         # Copy as ObjectMerge
@@ -57,6 +62,8 @@ else:
             objectMerge.setUserData('nodeshape', 'chevron_down')
             if ctrlclick:
                 objectMerge.setColor(randcolor)
+            elif altclick:
+                objectMerge.setColor(nodecolor)
             
             # Copy object merge node to clipboard
             sel = hou.selectedNodes()
@@ -192,6 +199,7 @@ else:
     <memberTool name="dabin_create_rndr_node"/>
     <memberTool name="promote_parm_to_controller"/>
     <memberTool name="dabin_toggle_displayflag"/>
+    <memberTool name="convert_asset_to_material"/>
     <memberTool name="dabin_increment_version"/>
     <memberTool name="statedemo"/>
     <memberTool name="create_pbr_shader"/>
@@ -201,7 +209,8 @@ else:
     <memberTool name="merge_objets_under_subnet"/>
     <memberTool name="merge_megascans_assets"/>
     <memberTool name="check_for_external_files"/>
-    <memberTool name="tool_1"/>
+    <memberTool name="subnet"/>
+    <memberTool name="convert_asset_to_material"/>
   </toolshelf>
 
   <tool name="dabin_promote_rig_pose_parms" label="Promote Rig Pose Parms" icon="PLASMA_App">
@@ -482,5 +491,17 @@ for ref in references:
         
         
 for i in range(24): print()]]></script>
+  </tool>
+
+  <tool name="convert_asset_to_material" label="Asset to Material" icon="hicon:/SVGIcons.index?BUTTONS_material_include.svg">
+    <script scriptType="python"><![CDATA[import hou
+
+import dabinUtils as utils
+
+nodes = utils.getSelectedNodes()
+for node in nodes:
+    node.parm('primpath').set('/ASSET/mtl')
+    node.parm('filerefprimpath').set('/ASSET/mtl')
+    node.parm('instanceable').set(False)]]></script>
   </tool>
 </shelfDocument>
