@@ -1,6 +1,6 @@
 # Dabin Tools
 
-Houdini package with all my hand-crafted tools and nodes
+Houdini package some shelf tools and nodes
 
 ## Installation
 
